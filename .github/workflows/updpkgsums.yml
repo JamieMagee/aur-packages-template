@@ -36,6 +36,6 @@ jobs:
 
       - name: Commit changes
         if: ${{ env.package != '' }}
-        uses: stefanzweifel/git-auto-commit-action@fd157da78fa13d9383e5580d1fd1184d89554b51 # tag=v4
+        uses: stefanzweifel/git-auto-commit-action@0049e3fa4059ca715255fbbcb7dea4516f02ce0a # tag=v4
         with:
           file_pattern: '*/PKGBUILD */.SRCINFO'
