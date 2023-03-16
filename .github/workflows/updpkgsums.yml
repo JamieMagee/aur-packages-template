@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3
+        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
         with:
           fetch-depth: 0
           ref: ${{ github.ref }}
@@ -23,19 +23,17 @@ jobs:
           #!/usr/bin/env bash
           set -euxo pipefail
 
-          echo "package=$(git diff --name-only origin/main origin/${GITHUB_HEAD_REF} "*PKGBUILD" | head -1 | xargs dirname)" >> $GITHUB_ENV
+          echo "pkgbuild=$(git diff --name-only origin/main origin/${GITHUB_HEAD_REF} "*PKGBUILD" | head -1 | xargs dirname)" >> $GITHUB_ENV
 
       - name: Validate package
         if: ${{ env.pkgbuild != '' }}
-        uses: hapakaien/archlinux-package-action@v2
+        uses: ./.github/actions/aur
         with:
-          path: ${{ env.package }}
-          updpkgsums: true
-          srcinfo: true
-          aur: true
+          action: 'updpkgsums'
+          pkgname: ${{ env.pkgbuild }}
 
-      - name: Commit changes
-        if: ${{ env.package != '' }}
-        uses: stefanzweifel/git-auto-commit-action@3ea6ae190baf489ba007f7c92608f33ce20ef04a # v4
+      - name: Commit
+        if: ${{ env.pkgbuild != '' }}
+        uses: stefanzweifel/git-auto-commit-action@3ea6ae190baf489ba007f7c92608f33ce20ef04a # v4.16.0
         with:
           file_pattern: '*/PKGBUILD */.SRCINFO'
