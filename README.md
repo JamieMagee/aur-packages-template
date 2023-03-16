@@ -5,7 +5,7 @@ Check out my [AUR packages repository][3] to see it working.
 
 ## How it works
 
-Check out [the break down on my blog][4] for a detailed walkthrough.
+Check out [the breakdown on my blog][4] for a step-by-step walkthrough.
 The short version is:
 
 1. Renovate will open PRs to update the `pkgver`
