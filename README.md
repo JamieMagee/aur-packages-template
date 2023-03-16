@@ -9,7 +9,7 @@ Check out [the breakdown on my blog][4] for a step-by-step walkthrough.
 The short version is:
 
 1. Renovate will open PRs to update the `pkgver`
-1. GitHub Actions will run `updpkgsums` and `makepkg --srcinfo > .SRCINFO` for each PR
+1. GitHub Actions will run `updpkgsums` and `makepkg --printsrcinfo > .SRCINFO` for each PR
 1. When a PR is merged GitHub Actions will publish the package to the AUR (if you've configured the `AUR_USERNAME`, `AUR_EMAIL` and `AUR_SSH_PRIVATE_KEY` secrets).
 
 ## Adding a new package
