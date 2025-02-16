@@ -24,7 +24,7 @@ jobs:
           echo "pkgbuild=$(git diff --name-only HEAD HEAD~1 "*/.SRCINFO" | head -1 | xargs dirname)" >> $GITHUB_ENV
 
       - name: Publish package
-        uses: KSXGitHub/github-actions-deploy-aur@184b3c40ce75c051264c5c0911cd8546011e8171 # v4.1.0
+        uses: KSXGitHub/github-actions-deploy-aur@2ac5a4c1d7035885d46b10e3193393be8460b6f1 # v4.1.1
         if: ${{ env.pkgbuild != '' }}
         with:
           pkgname: ${{ env.pkgbuild }}
