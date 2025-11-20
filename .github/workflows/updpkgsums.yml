@@ -11,6 +11,10 @@ on:
 jobs:
   updpkgsums:
     runs-on: ubuntu-latest
+    permissions:
+      # In order to make sure that the git-auto-commit-action has the permissions to write to the repository
+      # using the $GITHUB_TOKEN, we have to add the write permissions to it.
+      contents: write 
     steps:
       - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
