@@ -9,35 +9,95 @@ on:
       - main
 
 jobs:
-  updpkgsums:
+  find-packages:
     runs-on: ubuntu-latest
-    permissions:
-      # In order to make sure that the git-auto-commit-action has the permissions to write to the repository
-      # using the $GITHUB_TOKEN, we have to add the write permissions to it.
-      contents: write 
+    outputs:
+      count: ${{ steps.packages.outputs.count }}
+      packages: ${{ steps.packages.outputs.packages }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          ref: ${{ github.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Find updated package
+      - name: Find updated packages
+        id: packages
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           #!/usr/bin/env bash
-          set -euxo pipefail
+          set -euo pipefail
 
-          echo "pkgbuild=$(git diff --name-only origin/main origin/${GITHUB_HEAD_REF} "*PKGBUILD" | head -1 | xargs dirname)" >> $GITHUB_ENV
+          packages=$(.github/scripts/find-changed-packages.sh "$BASE_SHA" "$HEAD_SHA")
+          echo "count=$(jq length <<<"$packages")" >> "$GITHUB_OUTPUT"
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
+
+  validate:
+    name: Validate ${{ matrix.pkgbuild }}
+    needs: find-packages
+    if: ${{ needs.find-packages.outputs.count != '0' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        pkgbuild: ${{ fromJSON(needs.find-packages.outputs.packages) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Validate package
-        if: ${{ env.pkgbuild != '' }}
         uses: ./.github/actions/aur
         with:
-          action: 'updpkgsums'
-          pkgname: ${{ env.pkgbuild }}
+          action: "updpkgsums"
+          pkgname: ${{ matrix.pkgbuild }}
+
+      - name: Stage updated package
+        env:
+          PKGBUILD_DIR: ${{ matrix.pkgbuild }}
+        run: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          destination="$RUNNER_TEMP/updated-packages/$PKGBUILD_DIR"
+          mkdir -p "$destination"
+          cp "$PKGBUILD_DIR/PKGBUILD" "$PKGBUILD_DIR/.SRCINFO" "$destination/"
+
+      - name: Upload updated package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: updated-${{ matrix.pkgbuild }}
+          path: ${{ runner.temp }}/updated-packages
+          if-no-files-found: error
+          include-hidden-files: true
+
+  commit:
+    needs:
+      - find-packages
+      - validate
+    if: ${{ needs.find-packages.outputs.count != '0' && needs.validate.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      # git-auto-commit-action needs write access to update the pull request branch.
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+
+      - name: Download updated packages
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: updated-*
+          path: ${{ github.workspace }}
+          merge-multiple: true
 
       - name: Commit
-        if: ${{ env.pkgbuild != '' }}
         uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7.2.0
         with:
-          file_pattern: '*/PKGBUILD */.SRCINFO'
+          file_pattern: "*/PKGBUILD */.SRCINFO"
